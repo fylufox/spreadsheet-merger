@@ -13,7 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { hello } from './example-module';
 
-console.log(hello());
+import { SheetMerger } from './SheetMerger';
+
+/**
+ * メニューに表示される関数: データを統合
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function mergeSheets(): void {
+  const merger = new SheetMerger();
+  merger.mergeSheets();
+}
+
+/**
+ * メニューに表示される関数: 設定シートのテンプレートを作成
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function createConfigTemplate(): void {
+  const merger = new SheetMerger();
+  merger.createConfigTemplate();
+}
+
+/**
+ * スプレッドシートを開いたときに実行される関数
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function onOpen(): void {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('シート統合ツール')
+    .addItem('設定テンプレート作成', 'createConfigTemplate')
+    .addItem('データ統合実行', 'mergeSheets')
+    .addToUi();
+}
