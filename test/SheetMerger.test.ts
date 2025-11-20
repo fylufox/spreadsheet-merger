@@ -59,7 +59,7 @@ describe('SheetMerger', () => {
       const merger = new SheetMerger();
       merger.createConfigTemplate();
 
-      expect(mockSpreadsheet.insertSheet).toHaveBeenCalledWith('設定');
+      expect(mockSpreadsheet.insertSheet).toHaveBeenCalledWith('sm.settings');
       expect(mockSheet.setValues).toHaveBeenCalled();
       expect(mockUi.alert).toHaveBeenCalledWith(
         '設定シートのテンプレートを作成しました。'
@@ -92,7 +92,7 @@ describe('SheetMerger', () => {
       const merger = new SheetMerger();
 
       expect(() => merger.mergeSheets()).toThrow(
-        '設定シート "設定" が見つかりません。'
+        '設定シート "sm.settings" が見つかりません。'
       );
     });
 
@@ -126,7 +126,7 @@ describe('SheetMerger', () => {
       };
 
       mockSpreadsheet.getSheetByName.mockImplementation((name: string) => {
-        if (name === '設定') return mockConfigSheet;
+        if (name === 'sm.settings') return mockConfigSheet;
         return null;
       });
 
@@ -181,10 +181,10 @@ describe('SheetMerger', () => {
       };
 
       mockSpreadsheet.getSheetByName.mockImplementation((name: string) => {
-        if (name === '設定') return mockConfigSheet;
+        if (name === 'sm.settings') return mockConfigSheet;
         if (name === 'ユーザー') return mockUserSheet;
         if (name === '注文') return mockOrderSheet;
-        if (name === '統合データ') return mockOutputSheet;
+        if (name === 'sm.integrated_data') return mockOutputSheet;
         return null;
       });
 
@@ -228,9 +228,9 @@ describe('SheetMerger', () => {
       };
 
       mockSpreadsheet.getSheetByName.mockImplementation((name: string) => {
-        if (name === '設定') return mockConfigSheet;
+        if (name === 'sm.settings') return mockConfigSheet;
         if (name === 'ユーザー') return mockUserSheet;
-        if (name === '統合データ') return mockOutputSheet;
+        if (name === 'sm.integrated_data') return mockOutputSheet;
         return null;
       });
 

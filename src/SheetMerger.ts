@@ -38,10 +38,13 @@ export class SheetMerger {
   private outputSheetName: string;
 
   /**
-   * @param configSheetName 設定シート名(デフォルト: "設定")
-   * @param outputSheetName 出力シート名(デフォルト: "統合データ")
+   * @param configSheetName 設定シート名(デフォルト: "sm.settings")
+   * @param outputSheetName 出力シート名(デフォルト: "sm.integrated_data")
    */
-  constructor(configSheetName = '設定', outputSheetName = '統合データ') {
+  constructor(
+    configSheetName = 'sm.settings',
+    outputSheetName = 'sm.integrated_data'
+  ) {
     this.spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     this.configSheetName = configSheetName;
     this.outputSheetName = outputSheetName;
