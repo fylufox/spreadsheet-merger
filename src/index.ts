@@ -44,14 +44,24 @@ function exportToJson(): void {
 }
 
 /**
+ * メニューに表示される関数: 選択された主キーのみをJSON形式で出力
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function exportSelectedToJson(): void {
+  const merger = new SheetMerger();
+  merger.exportSelectedToJson();
+}
+
+/**
  * スプレッドシートを開いたときに実行される関数
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function onOpen(): void {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('シート統合ツール')
+  ui.createMenu('データ統合')
     .addItem('設定テンプレート作成', 'createConfigTemplate')
-    .addItem('データ統合実行', 'mergeSheets')
+    .addItem('データ統合', 'mergeSheets')
     .addItem('JSON出力', 'exportToJson')
+    .addItem('選択主キーのJSON出力', 'exportSelectedToJson')
     .addToUi();
 }

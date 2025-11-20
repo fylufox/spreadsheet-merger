@@ -319,6 +319,8 @@ describe('SheetMerger', () => {
 
       if (match) {
         const jsonString = match[1]
+          .replace(/&#39;/g, "'")
+          .replace(/&quot;/g, '"')
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
           .replace(/&amp;/g, '&');
@@ -330,6 +332,144 @@ describe('SheetMerger', () => {
         expect(parsedJson[0].ユーザー).toHaveProperty('name');
         expect(parsedJson[0].ユーザー).toHaveProperty('email');
       }
+    });
+  });
+
+  describe('exportSelectedToJson', () => {
+    it('選択された主キーのみをJSON形式で出力する', () => {
+      const mockConfigSheet = {
+        getDataRange: jest.fn().mockReturnValue({
+          getValues: jest.fn().mockReturnValue([
+            ['外部カラム', 'id'],
+            ['探索範囲(行)', '10'],
+            ['', ''],
+            ['シート名', 'カラム名'],
+            ['ユーザー', 'name'],
+            ['ユーザー', 'email'],
+          ]),
+        }),
+      };
+
+      const mockUserSheet = {
+        getDataRange: jest.fn().mockReturnValue({
+          getValues: jest.fn().mockReturnValue([
+            ['id', 'name', 'email'],
+            [1, '山田', 'yamada@example.com'],
+            [2, '佐藤', 'sato@example.com'],
+            [3, '鈴木', 'suzuki@example.com'],
+          ]),
+        }),
+      };
+
+      const mockActiveSheet = {
+        getActiveRange: jest.fn().mockReturnValue({
+          getValues: jest.fn().mockReturnValue([[1], [3]]), // idが1と3を選択
+        }),
+      };
+
+      const mockHtmlOutput = {
+        setWidth: jest.fn().mockReturnThis(),
+        setHeight: jest.fn().mockReturnThis(),
+      };
+
+      mockUi.showModalDialog = jest.fn();
+
+      global.HtmlService = {
+        createHtmlOutput: jest.fn().mockReturnValue(mockHtmlOutput),
+      } as MockType;
+
+      global.SpreadsheetApp = {
+        getActiveSpreadsheet: jest.fn(() => mockSpreadsheet),
+        getUi: jest.fn(() => mockUi),
+        getActiveSheet: jest.fn(() => mockActiveSheet),
+      } as MockType;
+
+      mockSpreadsheet.getSheetByName.mockImplementation((name: string) => {
+        if (name === 'sm.settings') return mockConfigSheet;
+        if (name === 'ユーザー') return mockUserSheet;
+        return null;
+      });
+
+      const merger = new SheetMerger();
+      merger.exportSelectedToJson();
+
+      expect(mockUi.showModalDialog).toHaveBeenCalled();
+
+      // HTMLに含まれるJSONを検証
+      const htmlContent = (global.HtmlService.createHtmlOutput as jest.Mock)
+        .mock.calls[0][0] as string;
+      const match = htmlContent.match(/<textarea[^>]*>([\s\S]*?)<\/textarea>/);
+      expect(match).toBeTruthy();
+
+      if (match) {
+        const jsonString = match[1]
+          .replace(/&#39;/g, "'")
+          .replace(/&quot;/g, '"')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+        const parsedJson = JSON.parse(jsonString);
+
+        // 選択された2つのIDのみがJSON出力される
+        expect(Array.isArray(parsedJson)).toBe(true);
+        expect(parsedJson.length).toBe(2);
+        expect(parsedJson[0].id).toBe('1');
+        expect(parsedJson[0].ユーザー.name).toBe('山田');
+        expect(parsedJson[1].id).toBe('3');
+        expect(parsedJson[1].ユーザー.name).toBe('鈴木');
+      }
+    });
+
+    it('選択範囲がない場合、エラーを表示する', () => {
+      const mockConfigSheet = {
+        getDataRange: jest.fn().mockReturnValue({
+          getValues: jest.fn().mockReturnValue([
+            ['外部カラム', 'id'],
+            ['探索範囲(行)', '10'],
+            ['', ''],
+            ['シート名', 'カラム名'],
+            ['ユーザー', 'name'],
+          ]),
+        }),
+      };
+
+      const mockUserSheet = {
+        getDataRange: jest.fn().mockReturnValue({
+          getValues: jest.fn().mockReturnValue([
+            ['id', 'name'],
+            [1, '山田'],
+          ]),
+        }),
+      };
+
+      const mockActiveSheet = {
+        getActiveRange: jest.fn().mockReturnValue({
+          getValues: jest.fn().mockReturnValue([['']]), // 空の選択
+        }),
+      };
+
+      mockUi.ButtonSet = { OK: 'OK' };
+
+      global.SpreadsheetApp = {
+        getActiveSpreadsheet: jest.fn(() => mockSpreadsheet),
+        getUi: jest.fn(() => mockUi),
+        getActiveSheet: jest.fn(() => mockActiveSheet),
+      } as MockType;
+
+      mockSpreadsheet.getSheetByName.mockImplementation((name: string) => {
+        if (name === 'sm.settings') return mockConfigSheet;
+        if (name === 'ユーザー') return mockUserSheet;
+        return null;
+      });
+
+      const merger = new SheetMerger();
+      merger.exportSelectedToJson();
+
+      expect(mockUi.alert).toHaveBeenCalledWith(
+        '選択エラー',
+        '主キー「id」を含むセルを選択してください。',
+        'OK'
+      );
     });
   });
 });

@@ -85,6 +85,49 @@ export class SheetMerger {
   }
 
   /**
+   * メイン処理: 選択された主キーのみをJSON形式で出力
+   */
+  exportSelectedToJson(): void {
+    try {
+      const ui = SpreadsheetApp.getUi();
+      const config = this.readConfig();
+      const mergedData = this.collectData(config);
+
+      // 選択範囲から主キーを取得
+      const selectedKeys = this.getSelectedForeignKeys();
+
+      if (selectedKeys.length === 0) {
+        ui.alert(
+          '選択エラー',
+          `主キー「${config.foreignKeyColumn}」を含むセルを選択してください。`,
+          ui.ButtonSet.OK
+        );
+        return;
+      }
+
+      // 選択された主キーのデータのみをフィルタリング
+      const filteredData = this.filterDataByKeys(mergedData, selectedKeys);
+
+      if (filteredData.size === 0) {
+        ui.alert(
+          '選択エラー',
+          '選択された主キーに対応するデータが見つかりませんでした。',
+          ui.ButtonSet.OK
+        );
+        return;
+      }
+
+      const json = this.convertToJson(filteredData, config);
+      this.showJsonDialog(json);
+    } catch (error) {
+      SpreadsheetApp.getUi().alert(
+        `エラーが発生しました: ${(error as Error).message}`
+      );
+      throw error;
+    }
+  }
+
+  /**
    * 設定シートから設定を読み込む
    */
   private readConfig(): MergeConfig {
@@ -338,6 +381,50 @@ export class SheetMerger {
   }
 
   /**
+   * 選択範囲から主キーを取得
+   */
+  private getSelectedForeignKeys(): string[] {
+    const sheet = SpreadsheetApp.getActiveSheet();
+    const selection = sheet.getActiveRange();
+
+    if (!selection) {
+      return [];
+    }
+
+    const values = selection.getValues();
+    const keys: string[] = [];
+
+    for (const row of values) {
+      for (const cell of row) {
+        if (cell !== null && cell !== undefined && cell !== '') {
+          keys.push(String(cell));
+        }
+      }
+    }
+
+    return keys;
+  }
+
+  /**
+   * 指定された主キーのデータのみをフィルタリング
+   */
+  private filterDataByKeys(
+    mergedData: Map<string, Map<string, string | number>>,
+    keys: string[]
+  ): Map<string, Map<string, string | number>> {
+    const filtered = new Map<string, Map<string, string | number>>();
+
+    for (const key of keys) {
+      const data = mergedData.get(key);
+      if (data) {
+        filtered.set(key, data);
+      }
+    }
+
+    return filtered;
+  }
+
+  /**
    * JSONデータをメッセージボックスで表示
    */
   private showJsonDialog(json: string): void {
@@ -359,14 +446,30 @@ export class SheetMerger {
     }
 
     // HTMLダイアログで表示
-    const htmlOutput = HtmlService.createHtmlOutput(
-      '<textarea readonly style="width:100%;height:500px;font-family:monospace;font-size:12px;">' +
-        json
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;') +
-        '</textarea>'
-    )
+    const escapedJson = json
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <base target="_top">
+          <style>
+            body { margin: 0; padding: 10px; font-family: monospace; }
+            #json { width: 100%; height: 550px; font-size: 12px; border: 1px solid #ccc; }
+          </style>
+        </head>
+        <body>
+          <textarea id="json" readonly>${escapedJson}</textarea>
+        </body>
+      </html>
+    `;
+
+    const htmlOutput = HtmlService.createHtmlOutput(html)
       .setWidth(700)
       .setHeight(600);
 
