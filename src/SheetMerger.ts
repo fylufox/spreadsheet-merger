@@ -230,20 +230,36 @@ export class SheetMerger {
       outputSheet = this.spreadsheet.insertSheet(this.outputSheetName);
     }
 
-    // ヘッダー行を作成
-    const headers: string[] = [config.foreignKeyColumn];
+    // 1行目: シート名行を作成
+    const sheetNameRow: string[] = [config.foreignKeyColumn];
+    for (const source of config.dataSources) {
+      for (let i = 0; i < source.columns.length; i++) {
+        sheetNameRow.push(source.sheetName);
+      }
+    }
+
+    // 2行目: カラム名行を作成
+    const columnNameRow: string[] = [config.foreignKeyColumn];
     for (const source of config.dataSources) {
       for (const column of source.columns) {
-        headers.push(`${source.sheetName}.${column}`);
+        columnNameRow.push(column);
+      }
+    }
+
+    // ヘッダーキーを作成(データ取得用)
+    const headerKeys: string[] = [config.foreignKeyColumn];
+    for (const source of config.dataSources) {
+      for (const column of source.columns) {
+        headerKeys.push(`${source.sheetName}.${column}`);
       }
     }
 
     // データ行を作成
-    const outputData: (string | number)[][] = [headers];
+    const outputData: (string | number)[][] = [sheetNameRow, columnNameRow];
     for (const rowData of mergedData.values()) {
       const row: (string | number)[] = [];
-      for (const header of headers) {
-        row.push(rowData.get(header) ?? '');
+      for (const headerKey of headerKeys) {
+        row.push(rowData.get(headerKey) ?? '');
       }
       outputData.push(row);
     }
@@ -254,8 +270,8 @@ export class SheetMerger {
         .getRange(1, 1, outputData.length, outputData[0].length)
         .setValues(outputData);
 
-      // ヘッダー行を太字にする
-      outputSheet.getRange(1, 1, 1, outputData[0].length).setFontWeight('bold');
+      // 1行目と2行目を太字にする
+      outputSheet.getRange(1, 1, 2, outputData[0].length).setFontWeight('bold');
     }
   }
 

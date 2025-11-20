@@ -239,15 +239,18 @@ describe('SheetMerger', () => {
 
       expect(mockOutputSheet.setValues).toHaveBeenCalled();
       const callArgs = mockOutputSheet.setValues.mock.calls[0][0];
-      // ヘッダー行(設定シートのヘッダーも含まれる)
+      // 1行目: シート名
       expect(callArgs[0][0]).toEqual('id');
-      expect(callArgs[0]).toContain('ユーザー.name');
-      // データ行1
-      expect(callArgs[1][0]).toEqual('1');
-      expect(callArgs[1]).toContain('山田');
-      // データ行2
-      expect(callArgs[2][0]).toEqual('2');
-      expect(callArgs[2]).toContain('佐藤');
+      expect(callArgs[0]).toContain('ユーザー');
+      // 2行目: カラム名
+      expect(callArgs[1][0]).toEqual('id');
+      expect(callArgs[1]).toContain('name');
+      // 3行目: データ行1
+      expect(callArgs[2][0]).toEqual('1');
+      expect(callArgs[2]).toContain('山田');
+      // 4行目: データ行2
+      expect(callArgs[3][0]).toEqual('2');
+      expect(callArgs[3]).toContain('佐藤');
     });
   });
 });
