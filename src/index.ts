@@ -35,6 +35,15 @@ function createConfigTemplate(): void {
 }
 
 /**
+ * メニューに表示される関数: JSON形式でデータを出力
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function exportToJson(): void {
+  const merger = new SheetMerger();
+  merger.exportToJson();
+}
+
+/**
  * スプレッドシートを開いたときに実行される関数
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -43,5 +52,6 @@ function onOpen(): void {
   ui.createMenu('シート統合ツール')
     .addItem('設定テンプレート作成', 'createConfigTemplate')
     .addItem('データ統合実行', 'mergeSheets')
+    .addItem('JSON出力', 'exportToJson')
     .addToUi();
 }

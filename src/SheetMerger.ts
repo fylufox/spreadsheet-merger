@@ -68,6 +68,23 @@ export class SheetMerger {
   }
 
   /**
+   * メイン処理: 設定を読み込んでデータを統合しJSON形式で出力
+   */
+  exportToJson(): void {
+    try {
+      const config = this.readConfig();
+      const mergedData = this.collectData(config);
+      const json = this.convertToJson(mergedData, config);
+      this.showJsonDialog(json);
+    } catch (error) {
+      SpreadsheetApp.getUi().alert(
+        `エラーが発生しました: ${(error as Error).message}`
+      );
+      throw error;
+    }
+  }
+
+  /**
    * 設定シートから設定を読み込む
    */
   private readConfig(): MergeConfig {
@@ -273,6 +290,88 @@ export class SheetMerger {
       // 1行目と2行目を太字にする
       outputSheet.getRange(1, 1, 2, outputData[0].length).setFontWeight('bold');
     }
+  }
+
+  /**
+   * 統合データをJSON形式に変換
+   */
+  private convertToJson(
+    mergedData: Map<string, Map<string, string | number>>,
+    config: MergeConfig
+  ): string {
+    const jsonData: Record<
+      string,
+      string | number | Record<string, string | number>
+    >[] = [];
+
+    for (const rowData of mergedData.values()) {
+      const record: Record<
+        string,
+        string | number | Record<string, string | number>
+      > = {};
+
+      // 外部キーを追加
+      const foreignKeyValue = rowData.get(config.foreignKeyColumn);
+      if (foreignKeyValue !== undefined) {
+        record[config.foreignKeyColumn] = foreignKeyValue;
+      }
+
+      // 各シートのデータをシート名でグループ化
+      for (const source of config.dataSources) {
+        const sheetData: Record<string, string | number> = {};
+        for (const column of source.columns) {
+          const key = `${source.sheetName}.${column}`;
+          const value = rowData.get(key);
+          if (value !== undefined) {
+            sheetData[column] = value;
+          }
+        }
+        if (Object.keys(sheetData).length > 0) {
+          record[source.sheetName] = sheetData;
+        }
+      }
+
+      jsonData.push(record);
+    }
+
+    return JSON.stringify(jsonData, null, 2);
+  }
+
+  /**
+   * JSONデータをメッセージボックスで表示
+   */
+  private showJsonDialog(json: string): void {
+    const ui = SpreadsheetApp.getUi();
+
+    // JSONが長すぎる場合は警告を表示
+    if (json.length > 50000) {
+      ui.alert(
+        'JSON出力',
+        'JSONデータが大きすぎるため、ダイアログに表示できません。\n' +
+          'データサイズ: ' +
+          json.length +
+          ' 文字\n\n' +
+          'データ量を減らすか、別の方法での出力を検討してください。',
+        ui.ButtonSet.OK
+      );
+      Logger.log('JSON出力: データサイズが大きすぎるため表示できませんでした');
+      return;
+    }
+
+    // HTMLダイアログで表示
+    const htmlOutput = HtmlService.createHtmlOutput(
+      '<textarea readonly style="width:100%;height:500px;font-family:monospace;font-size:12px;">' +
+        json
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;') +
+        '</textarea>'
+    )
+      .setWidth(700)
+      .setHeight(600);
+
+    ui.showModalDialog(htmlOutput, 'JSON出力');
+    Logger.log('JSON出力が完了しました（ダイアログ表示）');
   }
 
   /**

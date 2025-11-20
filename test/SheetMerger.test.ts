@@ -253,4 +253,83 @@ describe('SheetMerger', () => {
       expect(callArgs[3]).toContain('佐藤');
     });
   });
+
+  describe('exportToJson', () => {
+    it('JSON形式でダイアログに出力する', () => {
+      const mockConfigSheet = {
+        getDataRange: jest.fn().mockReturnValue({
+          getValues: jest.fn().mockReturnValue([
+            ['外部カラム', 'id'],
+            ['探索範囲(行)', '10'],
+            ['', ''],
+            ['シート名', 'カラム名'],
+            ['ユーザー', 'name'],
+            ['ユーザー', 'email'],
+          ]),
+        }),
+      };
+
+      const mockUserSheet = {
+        getDataRange: jest.fn().mockReturnValue({
+          getValues: jest.fn().mockReturnValue([
+            ['id', 'name', 'email'],
+            [1, '山田', 'yamada@example.com'],
+            [2, '佐藤', 'sato@example.com'],
+          ]),
+        }),
+      };
+
+      const mockHtmlOutput = {
+        setWidth: jest.fn().mockReturnThis(),
+        setHeight: jest.fn().mockReturnThis(),
+      };
+
+      mockUi.showModalDialog = jest.fn();
+
+      global.HtmlService = {
+        createHtmlOutput: jest.fn().mockReturnValue(mockHtmlOutput),
+      } as MockType;
+
+      mockSpreadsheet.getSheetByName.mockImplementation((name: string) => {
+        if (name === 'sm.settings') return mockConfigSheet;
+        if (name === 'ユーザー') return mockUserSheet;
+        return null;
+      });
+
+      const merger = new SheetMerger();
+      merger.exportToJson();
+
+      expect(global.HtmlService.createHtmlOutput).toHaveBeenCalled();
+      expect(mockHtmlOutput.setWidth).toHaveBeenCalledWith(700);
+      expect(mockHtmlOutput.setHeight).toHaveBeenCalledWith(600);
+      expect(mockUi.showModalDialog).toHaveBeenCalledWith(
+        mockHtmlOutput,
+        'JSON出力'
+      );
+
+      // HTMLに含まれるJSONを検証
+      const htmlContent = (global.HtmlService.createHtmlOutput as jest.Mock)
+        .mock.calls[0][0] as string;
+      expect(htmlContent).toContain('<textarea');
+      expect(htmlContent).toContain('readonly');
+
+      // HTMLエンティティをデコードしてJSON検証
+      const match = htmlContent.match(/<textarea[^>]*>([\s\S]*?)<\/textarea>/);
+      expect(match).toBeTruthy();
+
+      if (match) {
+        const jsonString = match[1]
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+        const parsedJson = JSON.parse(jsonString);
+        expect(Array.isArray(parsedJson)).toBe(true);
+        expect(parsedJson.length).toBe(2);
+        expect(parsedJson[0]).toHaveProperty('id');
+        expect(parsedJson[0]).toHaveProperty('ユーザー');
+        expect(parsedJson[0].ユーザー).toHaveProperty('name');
+        expect(parsedJson[0].ユーザー).toHaveProperty('email');
+      }
+    });
+  });
 });
